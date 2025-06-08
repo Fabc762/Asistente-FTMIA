@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FTMIA - Tu Asistente de IA</title>
+    <title>FTMIA - Tu Asistente de IA (Gemini con Imágenes)</title>
     <!-- Tailwind CSS CDN para estilos rápidos y responsivos -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -59,6 +59,7 @@
             border-radius: 1.25rem; /* Más redondeado */
             line-height: 1.4;
             word-wrap: break-word; /* Asegura que las palabras largas se rompan */
+            position: relative; /* Necesario para la imagen */
         }
         .message.user .message-bubble {
             background-color: #4299e1; /* Azul para mensajes del usuario */
@@ -131,6 +132,41 @@
             width: 24px;
             height: 24px;
         }
+        .image-upload-button {
+            background-color: #48bb78; /* Verde para el botón de imagen */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 1rem; /* Margen a la derecha del input */
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .image-upload-button:hover {
+            background-color: #38a169;
+            transform: translateY(-2px);
+        }
+        .image-upload-button:active {
+            transform: translateY(0);
+        }
+        .image-upload-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Estilos para las imágenes en el chat */
+        .message-bubble img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 8px; /* Espacio entre el texto y la imagen si hay texto */
+            display: block; /* Asegura que la imagen no ocupe más espacio del necesario */
+        }
 
         /* Loading indicator */
         .loading-dots span {
@@ -156,6 +192,44 @@
             }
         }
 
+        /* Preview de imagen seleccionada antes de enviar */
+        #image-preview-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background-color: #4a5568;
+            border-radius: 8px;
+            overflow: hidden;
+            max-height: 100px; /* Limitar altura del preview */
+        }
+        #image-preview {
+            max-width: 80px;
+            max-height: 80px;
+            object-fit: contain;
+            border-radius: 4px;
+            margin-right: 1rem;
+        }
+        #clear-image-preview {
+            background-color: #e53e3e; /* Rojo para borrar */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            line-height: 1; /* Para centrar la X */
+            padding: 0;
+            margin-left: auto; /* Mueve la X a la derecha */
+        }
+        #clear-image-preview:hover {
+            background-color: #c53030;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 640px) {
             .chat-container {
@@ -164,7 +238,7 @@
                 min-height: 100vh; /* Ocupa toda la altura en móviles */
             }
             .chat-messages {
-                max-height: calc(100vh - 150px); /* Ajusta altura en móviles */
+                max-height: calc(100vh - 200px); /* Ajusta altura en móviles, dejando espacio para preview */
             }
         }
     </style>
@@ -177,8 +251,23 @@
         <div id="chat-messages" class="chat-messages">
             <!-- Los mensajes del chat se insertarán aquí -->
         </div>
+
+        <!-- Contenedor para la previsualización de la imagen -->
+        <div id="image-preview-container" class="hidden">
+            <img id="image-preview" src="" alt="Vista previa de la imagen">
+            <button id="clear-image-preview">X</button>
+        </div>
+
         <div class="chat-input-area">
-            <input type="text" id="user-input" class="chat-input" placeholder="Escribe tu mensaje...">
+            <!-- Botón para subir imagen -->
+            <input type="file" id="image-upload" accept="image/*" class="hidden">
+            <button id="image-upload-button" class="image-upload-button">
+                <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-4 3 3 5-5V15z" clip-rule="evenodd"></path>
+                </svg>
+            </button>
+
+            <input type="text" id="user-input" class="chat-input" placeholder="Escribe tu mensaje o pega una imagen...">
             <button id="send-button" class="send-button">
                 <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.553.894l5 1.429a1 1 0 001.169-1.409l-7-14z"></path>
@@ -188,19 +277,39 @@
     </div>
 
     <script>
-        // ¡IMPORTANTE! Esta URL YA ESTÁ REEMPLAZADA con la "Endpoint URL" de tu Space de Hugging Face.
-        // Es: 'https://yixczfab-ftmia.hf.space/run/predict'
-        const API_URL = 'https://yixczfab-ftmia.hf.space/run/predict'; 
+        // *** TU CLAVE API DE GOOGLE GEMINI YA ESTÁ PEGADA AQUÍ ***
+        const apiKey = "AIzaSyCU1SWHZiAZj8-ROAuQcNMrTJY3j2mWKg4"; 
+
+        // Modelo de Gemini a usar para texto. 'gemini-2.0-flash' es rápido y económico.
+        const MODEL_NAME = 'gemini-2.0-flash'; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
 
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
+        const imageUploadButton = document.getElementById('image-upload-button');
+        const imageUploadInput = document.getElementById('image-upload');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const clearImagePreviewButton = document.getElementById('clear-image-preview');
 
         // Historial de la conversación para enviar al modelo de IA
+        // El formato es [{ role: "user", parts: [{ text: "..." }, { inlineData: { ... } }] }]
         let conversationHistory = [];
+        let uploadedImageData = null; // Para almacenar la imagen en Base64 y mimeType
+
+        // Función para convertir una imagen a Base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Solo la parte Base64
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
 
         // Función para añadir mensajes al chat
-        function addMessage(sender, text) {
+        function addMessage(sender, text, imageDataUrl = null) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender);
 
@@ -210,7 +319,18 @@
 
             const bubbleDiv = document.createElement('div');
             bubbleDiv.classList.add('message-bubble');
-            bubbleDiv.textContent = text;
+            
+            if (text) {
+                const textNode = document.createTextNode(text);
+                bubbleDiv.appendChild(textNode);
+            }
+
+            if (imageDataUrl) {
+                const imgElement = document.createElement('img');
+                imgElement.src = imageDataUrl;
+                imgElement.alt = sender === 'user' ? 'Imagen enviada' : 'Imagen de IA';
+                bubbleDiv.appendChild(imgElement);
+            }
 
             messageDiv.appendChild(avatarDiv);
             messageDiv.appendChild(bubbleDiv);
@@ -244,23 +364,49 @@
             }
         }
 
+        // Función para limpiar la imagen seleccionada/pegada
+        function clearImageSelection() {
+            uploadedImageData = null;
+            imageUploadInput.value = ''; // Limpiar el input file
+            imagePreviewContainer.classList.add('hidden');
+            imagePreview.src = '';
+        }
+
         // Función para enviar mensaje a la IA
         async function sendMessage() {
             const message = userInput.value.trim();
-            if (message === '') return;
 
-            addMessage('user', message); // Mostrar mensaje del usuario en el chat
-            conversationHistory.push([message, null]); // Añadir al historial (respuesta del bot inicialmente nula)
-            userInput.value = ''; // Limpiar el input
+            // Solo enviar si hay mensaje o imagen
+            if (message === '' && !uploadedImageData) return;
+
+            // Construir las "partes" del mensaje del usuario
+            let userParts = [];
+            if (message) {
+                userParts.push({ text: message });
+            }
+            if (uploadedImageData) {
+                userParts.push({
+                    inlineData: {
+                        mimeType: uploadedImageData.mimeType,
+                        data: uploadedImageData.base64
+                    }
+                });
+            }
+
+            addMessage('user', message, uploadedImageData ? `data:${uploadedImageData.mimeType};base64,${uploadedImageData.base64}` : null); // Mostrar mensaje del usuario en el chat
+            conversationHistory.push({ role: "user", parts: userParts }); // Añadir al historial
+            
+            userInput.value = ''; // Limpiar el input de texto
+            clearImageSelection(); // Limpiar la imagen seleccionada
 
             showLoadingIndicator(); // Mostrar indicador de carga
 
             try {
                 const payload = {
-                    data: [conversationHistory] // Gradio ChatInterface espera el historial como [conversationHistory]
+                    contents: conversationHistory,
                 };
 
-                const response = await fetch(API_URL, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -269,27 +415,33 @@
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Error en la API: ${response.status} - ${errorText}`);
+                    const errorResponse = await response.json(); // Intentar leer el JSON de error
+                    console.error('Error en la API de Gemini:', errorResponse);
+                    throw new Error(`Error en la API: ${response.status} - ${errorResponse.error.message || 'Error desconocido'}`);
                 }
 
                 const result = await response.json();
-                
-                // La respuesta de Gradio ChatInterface viene en result.data[0][último_mensaje][1]
-                const botResponse = result.data[0][result.data[0].length - 1][1]; 
 
-                hideLoadingIndicator(); // Ocultar indicador de carga
-                addMessage('bot', botResponse); // Mostrar respuesta de la IA
-
-                // Actualizar el historial con la respuesta del bot
-                conversationHistory[conversationHistory.length - 1][1] = botResponse;
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const botResponse = result.candidates[0].content.parts[0].text;
+                    hideLoadingIndicator(); // Ocultar indicador de carga
+                    addMessage('bot', botResponse); // Mostrar respuesta de la IA
+                    conversationHistory.push({ role: "model", parts: [{ text: botResponse }] }); // Actualizar historial
+                } else {
+                    console.error('Respuesta inesperada de la IA:', result);
+                    throw new Error('La IA no proporcionó una respuesta válida.');
+                }
 
             } catch (error) {
                 console.error('Error al comunicarse con la IA:', error);
                 hideLoadingIndicator(); // Ocultar indicador de carga
                 addMessage('bot', 'Lo siento, no pude comunicarme con la IA. Intenta de nuevo más tarde.');
-                // Revertir el último mensaje en el historial para no enviar un mensaje fallido
-                conversationHistory.pop(); 
+                // Quitar el último mensaje del usuario del historial si falló la respuesta
+                if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
+                    conversationHistory.pop(); 
+                }
             }
         }
 
@@ -301,8 +453,67 @@
             }
         });
 
+        // Manejo de la subida de imagen con el botón
+        imageUploadButton.addEventListener('click', () => {
+            imageUploadInput.click(); // Simula el clic en el input de archivo
+        });
+
+        imageUploadInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                try {
+                    const base64 = await fileToBase64(file);
+                    uploadedImageData = {
+                        base64: base64,
+                        mimeType: file.type
+                    };
+                    imagePreview.src = URL.createObjectURL(file);
+                    imagePreviewContainer.classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error al leer el archivo de imagen:', error);
+                    alert('Error al cargar la imagen. Intenta de nuevo.'); // Usar una ventana modal custom en un app real
+                    clearImageSelection();
+                }
+            } else if (file) {
+                alert('Por favor, selecciona un archivo de imagen válido.'); // Usar una ventana modal custom
+                clearImageSelection();
+            }
+        });
+
+        // Manejo del pegado de imagen
+        userInput.addEventListener('paste', async (event) => {
+            const items = event.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    const file = items[i].getAsFile();
+                    if (file) {
+                        try {
+                            const base64 = await fileToBase64(file);
+                            uploadedImageData = {
+                                base64: base64,
+                                mimeType: file.type
+                            };
+                            imagePreview.src = URL.createObjectURL(file);
+                            imagePreviewContainer.classList.remove('hidden');
+                            userInput.value = ''; // Limpiar cualquier texto pegado junto con la imagen
+                            event.preventDefault(); // Evita que el texto de la imagen se pegue en el input
+                            break; // Solo procesa la primera imagen
+                        } catch (error) {
+                            console.error('Error al pegar la imagen:', error);
+                            alert('Error al pegar la imagen. Intenta de nuevo.'); // Usar una ventana modal custom
+                            clearImageSelection();
+                        }
+                    }
+                }
+            }
+        });
+
+        // Botón para borrar la previsualización de la imagen
+        clearImagePreviewButton.addEventListener('click', clearImageSelection);
+
+
         // Mensaje de bienvenida inicial
-        addMessage('bot', '¡Hola! Soy FTMIA, tu asistente conversacional. Pregúntame lo que quieras.');
+        addMessage('bot', '¡Hola! Soy FTMIA, tu asistente conversacional. Pregúntame lo que quieras. ¡Ahora también puedes enviarme imágenes!');
     </script>
 </body>
 </html>
