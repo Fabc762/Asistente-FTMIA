@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTMIA - Tu Asistente de IA</title>
+    <!-- Tailwind CSS CDN para estilos rápidos y responsivos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Fondo oscuro */
+            color: #e2e8f0; /* Texto claro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #2d3748; /* Fondo más claro para el contenedor de chat */
+            border-radius: 15px; /* Bordes redondeados */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); /* Sombra suave */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin: 20px; /* Margen para pantallas pequeñas */
+        }
+        .chat-header {
+            background-color: #4a5568; /* Color de encabezado */
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-bottom: 1px solid #2d3748;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 70vh; /* Altura máxima para el scroll */
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message {
+            display: flex;
+            align-items: flex-end;
+            max-width: 80%;
+        }
+        .message.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+        .message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 1.25rem; /* Más redondeado */
+            line-height: 1.4;
+            word-wrap: break-word; /* Asegura que las palabras largas se rompan */
+        }
+        .message.user .message-bubble {
+            background-color: #4299e1; /* Azul para mensajes del usuario */
+            color: white;
+            border-bottom-right-radius: 0.25rem; /* Esquina inferior derecha menos redondeada */
+        }
+        .message.bot .message-bubble {
+            background-color: #a0aec0; /* Gris claro para mensajes del bot */
+            color: #2d3748;
+            border-bottom-left-radius: 0.25rem; /* Esquina inferior izquierda menos redondeada */
+        }
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin: 0 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            background-color: #718096; /* Gris oscuro para avatares */
+            color: white;
+            flex-shrink: 0;
+        }
+        .message.user .message-avatar {
+            background-color: #3182ce; /* Azul oscuro para avatar de usuario */
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 1.5rem;
+            border-top: 1px solid #4a5568;
+            background-color: #2d3748;
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 25px; /* Input muy redondeado */
+            border: 1px solid #4a5568;
+            background-color: #4a5568;
+            color: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input:focus {
+            border-color: #63b3ed;
+        }
+        .send-button {
+            background-color: #63b3ed; /* Azul para el botón enviar */
+            color: white;
+            border: none;
+            border-radius: 50%; /* Botón redondo */
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-left: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .send-button:hover {
+            background-color: #4299e1;
+            transform: translateY(-2px);
+        }
+        .send-button:active {
+            transform: translateY(0);
+        }
+        .send-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Loading indicator */
+        .loading-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #a0aec0;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1.0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .chat-container {
+                margin: 0;
+                border-radius: 0;
+                min-height: 100vh; /* Ocupa toda la altura en móviles */
+            }
+            .chat-messages {
+                max-height: calc(100vh - 150px); /* Ajusta altura en móviles */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Mi IA Conversacional: FTMIA
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <!-- Los mensajes del chat se insertarán aquí -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="user-input" class="chat-input" placeholder="Escribe tu mensaje...">
+            <button id="send-button" class="send-button">
+                <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.553.894l5 1.429a1 1 0 001.169-1.409l-7-14z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ¡IMPORTANTE! Esta URL YA ESTÁ REEMPLAZADA con la "Endpoint URL" de tu Space de Hugging Face.
+        // Es: 'https://yixczfab-ftmia.hf.space/run/predict'
+        const API_URL = 'https://yixczfab-ftmia.hf.space/run/predict'; 
+
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        // Historial de la conversación para enviar al modelo de IA
+        let conversationHistory = [];
+
+        // Función para añadir mensajes al chat
+        function addMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.classList.add('message-avatar');
+            avatarDiv.textContent = sender === 'user' ? 'Tú' : 'IA'; // Avatar simple con iniciales
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('message-bubble');
+            bubbleDiv.textContent = text;
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // Desplazar hacia abajo para ver el último mensaje
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Función para mostrar indicador de carga
+        function showLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('message', 'bot', 'loading-indicator');
+            const avatarDiv = document.createElement('div');
+            avatarDiv.classList.add('message-avatar');
+            avatarDiv.textContent = 'IA';
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('message-bubble');
+            bubbleDiv.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+            loadingDiv.appendChild(avatarDiv);
+            loadingDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Función para ocultar indicador de carga
+        function hideLoadingIndicator() {
+            const loadingDiv = document.querySelector('.loading-indicator');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        // Función para enviar mensaje a la IA
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message === '') return;
+
+            addMessage('user', message); // Mostrar mensaje del usuario en el chat
+            conversationHistory.push([message, null]); // Añadir al historial (respuesta del bot inicialmente nula)
+            userInput.value = ''; // Limpiar el input
+
+            showLoadingIndicator(); // Mostrar indicador de carga
+
+            try {
+                const payload = {
+                    data: [conversationHistory] // Gradio ChatInterface espera el historial como [conversationHistory]
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Error en la API: ${response.status} - ${errorText}`);
+                }
+
+                const result = await response.json();
+                
+                // La respuesta de Gradio ChatInterface viene en result.data[0][último_mensaje][1]
+                const botResponse = result.data[0][result.data[0].length - 1][1]; 
+
+                hideLoadingIndicator(); // Ocultar indicador de carga
+                addMessage('bot', botResponse); // Mostrar respuesta de la IA
+
+                // Actualizar el historial con la respuesta del bot
+                conversationHistory[conversationHistory.length - 1][1] = botResponse;
+
+            } catch (error) {
+                console.error('Error al comunicarse con la IA:', error);
+                hideLoadingIndicator(); // Ocultar indicador de carga
+                addMessage('bot', 'Lo siento, no pude comunicarme con la IA. Intenta de nuevo más tarde.');
+                // Revertir el último mensaje en el historial para no enviar un mensaje fallido
+                conversationHistory.pop(); 
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Mensaje de bienvenida inicial
+        addMessage('bot', '¡Hola! Soy FTMIA, tu asistente conversacional. Pregúntame lo que quieras.');
+    </script>
+</body>
+</html>
