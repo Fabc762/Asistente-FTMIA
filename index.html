@@ -192,13 +192,15 @@
             }
         }
 
-        /* Preview de imagen seleccionada antes de enviar */
+        /* ******************************************************************* */
+        /* CAMBIOS PARA LA PREVISUALIZACIÓN DE IMAGEN */
+        /* ******************************************************************* */
         #image-preview-container {
             display: flex;
             align-items: center;
             margin-bottom: 1rem;
             padding: 0.5rem;
-            background-color: #4a5568;
+            /* Eliminado: background-color: #4a5568; (fondo plomo) */
             border-radius: 8px;
             overflow: hidden;
             max-height: 100px; /* Limitar altura del preview */
@@ -211,24 +213,10 @@
             margin-right: 1rem;
         }
         #clear-image-preview {
-            background-color: #e53e3e; /* Rojo para borrar */
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            font-size: 0.8rem;
-            line-height: 1; /* Para centrar la X */
-            padding: 0;
-            margin-left: auto; /* Mueve la X a la derecha */
+            /* Eliminado: Estilos para la X roja */
+            display: none; /* Ocultar el botón X */
         }
-        #clear-image-preview:hover {
-            background-color: #c53030;
-        }
+        /* ******************************************************************* */
 
         /* Responsive adjustments */
         @media (max-width: 640px) {
@@ -255,7 +243,7 @@
         <!-- Contenedor para la previsualización de la imagen -->
         <div id="image-preview-container" class="hidden">
             <img id="image-preview" src="" alt="Vista previa de la imagen">
-            <button id="clear-image-preview">X</button>
+            <!-- Eliminado: Botón para borrar la previsualización (la X roja) -->
         </div>
 
         <div class="chat-input-area">
@@ -277,7 +265,7 @@
     </div>
 
     <script>
-        // *** TU CLAVE API DE GOOGLE GEMINI YA ESTÁ PEGADA AQUÍ ***
+        // TU CLAVE API DE GOOGLE GEMINI YA ESTÁ PEGADA AQUÍ
         const apiKey = "AIzaSyCU1SWHZiAZj8-ROAuQcNMrTJY3j2mWKg4"; 
 
         // Modelo de Gemini a usar para texto. 'gemini-2.0-flash' es rápido y económico.
@@ -291,10 +279,8 @@
         const imageUploadInput = document.getElementById('image-upload');
         const imagePreviewContainer = document.getElementById('image-preview-container');
         const imagePreview = document.getElementById('image-preview');
-        const clearImagePreviewButton = document.getElementById('clear-image-preview');
+        const clearImagePreviewButton = document.getElementById('clear-image-preview'); // Mantenemos la referencia
 
-        // Historial de la conversación para enviar al modelo de IA
-        // El formato es [{ role: "user", parts: [{ text: "..." }, { inlineData: { ... } }] }]
         let conversationHistory = [];
         let uploadedImageData = null; // Para almacenar la imagen en Base64 y mimeType
 
@@ -379,7 +365,7 @@
             // Solo enviar si hay mensaje o imagen
             if (message === '' && !uploadedImageData) return;
 
-            // Construir las "partes" del mensaje del usuario
+            // Construir las "partes" del mensaje del user
             let userParts = [];
             if (message) {
                 userParts.push({ text: message });
@@ -393,7 +379,7 @@
                 });
             }
 
-            addMessage('user', message, uploadedImageData ? `data:${uploadedImageData.mimeType};base64,${uploadedImageData.base64}` : null); // Mostrar mensaje del usuario en el chat
+            addMessage('user', message, uploadedImageData ? `data:${uploadedImageData.mimeType};base64,${uploadedImageData.base64}` : null); // Mostrar mensaje del user en el chat
             conversationHistory.push({ role: "user", parts: userParts }); // Añadir al historial
             
             userInput.value = ''; // Limpiar el input de texto
@@ -469,13 +455,14 @@
                     };
                     imagePreview.src = URL.createObjectURL(file);
                     imagePreviewContainer.classList.remove('hidden');
+                    // No limpiar el input de texto aquí, solo la vista previa
                 } catch (error) {
                     console.error('Error al leer el archivo de imagen:', error);
-                    alert('Error al cargar la imagen. Intenta de nuevo.'); // Usar una ventana modal custom en un app real
+                    // alert('Error al cargar la imagen. Intenta de nuevo.'); // Usar una ventana modal custom en un app real
                     clearImageSelection();
                 }
             } else if (file) {
-                alert('Por favor, selecciona un archivo de imagen válido.'); // Usar una ventana modal custom
+                // alert('Por favor, selecciona un archivo de imagen válido.'); // Usar una ventana modal custom
                 clearImageSelection();
             }
         });
@@ -500,7 +487,7 @@
                             break; // Solo procesa la primera imagen
                         } catch (error) {
                             console.error('Error al pegar la imagen:', error);
-                            alert('Error al pegar la imagen. Intenta de nuevo.'); // Usar una ventana modal custom
+                            // alert('Error al pegar la imagen. Intenta de nuevo.'); // Usar una ventana modal custom
                             clearImageSelection();
                         }
                     }
@@ -508,8 +495,8 @@
             }
         });
 
-        // Botón para borrar la previsualización de la imagen
-        clearImagePreviewButton.addEventListener('click', clearImageSelection);
+        // Eliminamos el listener para el botón clearImagePreviewButton, ya que lo ocultamos
+        // clearImagePreviewButton.addEventListener('click', clearImageSelection);
 
 
         // Mensaje de bienvenida inicial
